@@ -38,7 +38,7 @@
         .badge-available { background-color: rgba(255, 255, 255, 0.95); color: #198754; }
         .badge-out { background-color: rgba(255, 255, 255, 0.95); color: #dc3545; }
 
-        /* ✨ Cart Floating Button ✨ */
+        /* Cart Floating Button */
         .fab-cart {
             position: fixed; bottom: 30px; right: 30px;
             width: 65px; height: 65px; border-radius: 50%;
@@ -128,28 +128,37 @@
                 <form id="borrowForm" style="display: none;">
                     <hr class="mb-4">
                     <h6 class="fw-bold mb-3"><i class="bi bi-person-circle me-2"></i>ข้อมูลผู้ยืม</h6>
+                    
                     <div class="form-floating mb-3">
                         <input type="text" class="form-control rounded-3" id="studentName" placeholder="ชื่อ" required>
                         <label>ชื่อ-นามสกุล (เช่น ด.ช.รักเรียน)</label>
                     </div>
+
                     <div class="row g-2 mb-4">
-                        <div class="col-6">
+                        <div class="col-5">
                             <div class="form-floating">
                                 <select class="form-select rounded-3" id="studentClass" required>
-                                    <option value="" selected disabled>เลือกชั้น</option>
+                                    <option value="" selected disabled>ชั้น</option>
                                     <option value="ม.1">ม.1</option><option value="ม.2">ม.2</option><option value="ม.3">ม.3</option>
                                     <option value="ม.4">ม.4</option><option value="ม.5">ม.5</option><option value="ม.6">ม.6</option>
                                 </select>
                                 <label>ระดับชั้น</label>
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-3">
                             <div class="form-floating">
-                                <input type="text" class="form-control rounded-3" id="studentRoom" placeholder="ห้อง" required>
-                                <label>ห้อง / เลขที่</label>
+                                <input type="number" class="form-control rounded-3" id="studentRoom" placeholder="ห้อง" required>
+                                <label>ห้อง</label>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="form-floating">
+                                <input type="number" class="form-control rounded-3" id="studentNo" placeholder="เลขที่" required>
+                                <label>เลขที่</label>
                             </div>
                         </div>
                     </div>
+
                     <button type="submit" id="submitBtn" class="btn btn-primary w-100 btn-lg rounded-pill fw-bold py-3" style="background: var(--primary-gradient); border:none;">
                         ยืนยันการยืมทั้งหมด
                     </button>
@@ -164,14 +173,14 @@
 
 <script>
     // ==========================================
-    // 🔴 แก้ URL ของครูตรงนี้
+    // 🔴🔴🔴 อย่าลืมวาง URL ของครูตรงนี้อีกครั้งนะครับ! 🔴🔴🔴
     // ==========================================
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw9SxAGlx9pQ3ipDfvTNUUZRTVAtCaG3AFjb980A-pmtS_M1lGh1dUrgBrE-YfJKakb/exec"; 
     // ==========================================
 
     let allItems = [];
     let currentCategory = 'all';
-    let cart = []; // 🛒 ตัวแปรเก็บของในตะกร้า
+    let cart = []; 
 
     document.addEventListener('DOMContentLoaded', loadItems);
 
@@ -255,17 +264,13 @@
         });
     }
 
-    // ==========================
-    // 🛒 Cart Logic (ระบบตะกร้า)
-    // ==========================
+    // Cart Logic
     const cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
 
     function addToCart(id, name) {
-        // เพิ่มของเข้า Array
         cart.push({ id, name });
         updateCartBadge();
         
-        // เอฟเฟกต์ปุ่มสั่น
         const fab = document.querySelector('.fab-cart');
         fab.classList.add('shake');
         setTimeout(() => fab.classList.remove('shake'), 500);
@@ -318,9 +323,9 @@
     }
 
     function removeFromCart(index) {
-        cart.splice(index, 1); // ลบออกจาก Array
+        cart.splice(index, 1); 
         updateCartBadge();
-        renderCartList(); // รีเฟรชหน้า Modal
+        renderCartList();
     }
 
     function checkDeepLink(items) {
@@ -329,7 +334,6 @@
         if (targetId) {
             const item = items.find(i => i.id == targetId);
             if (item && item.available > 0) {
-                // ถ้าสแกน QR มา ให้เด้งถามเลยว่าจะใส่ตะกร้าไหม
                 Swal.fire({
                     title: `พบ ${item.name}`,
                     text: "ต้องการเพิ่มลงตะกร้าใช่ไหม?",
@@ -340,14 +344,13 @@
                 }).then((res) => {
                     if (res.isConfirmed) {
                         addToCart(item.id, item.name);
-                        openCartModal(); // เปิดตะกร้าโชว์เลย
+                        openCartModal();
                     }
                 });
             }
         }
     }
 
-    // Submit Cart (ส่งข้อมูลหลายชิ้นพร้อมกัน)
     document.getElementById('borrowForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
@@ -355,15 +358,17 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังส่งข้อมูล...';
 
+        // 👇 รวมข้อมูล ระดับชั้น + ห้อง + เลขที่ ส่งไปเป็นก้อนเดียว
         const sClass = document.getElementById('studentClass').value;
         const sRoom = document.getElementById('studentRoom').value;
-        const fullDetails = `${sClass} ห้อง ${sRoom}`;
+        const sNo = document.getElementById('studentNo').value;
+        const fullDetails = `${sClass} ห้อง ${sRoom} เลขที่ ${sNo}`;
 
         const data = {
-            action: 'borrow_request_cart', // Action แบบใหม่
-            items: cart,                   // ส่งไปทั้งตะกร้า
+            action: 'borrow_request_cart',
+            items: cart,
             student_name: document.getElementById('studentName').value,
-            student_details: fullDetails
+            student_details: fullDetails // ส่งไปเหมือนเดิม
         };
 
         fetch(WEB_APP_URL, {
@@ -379,11 +384,10 @@
                     icon: 'success',
                     confirmButtonColor: '#764ba2'
                 }).then(() => {
-                    cart = []; // ล้างตะกร้า
+                    cart = [];
                     updateCartBadge();
                     cartModal.hide();
                     document.getElementById('borrowForm').reset();
-                    // ไม่ต้องรีเฟรชหน้าเว็บก็ได้ แค่ปิด Modal ก็พอ
                 });
             } else {
                 throw new Error(result.message);
