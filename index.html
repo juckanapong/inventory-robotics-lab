@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Inventory | ระบบยืมอุปกรณ์</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-hover-shadow: 0 10px 20px rgba(118, 75, 162, 0.15);
+        }
+
+        body { font-family: 'Prompt', sans-serif; background-color: #f8f9fa; color: #333; }
+
+        /* Navbar & Button */
+        .navbar-custom { background: var(--primary-gradient); padding: 0.8rem 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .btn-admin-link {
+            background-color: rgba(255,255,255,0.2); 
+            color: white; border: none; transition: all 0.2s;
+        }
+        .btn-admin-link:hover { background-color: rgba(255,255,255,0.4); transform: translateY(-2px); color: white; }
+
+        .search-box { border-radius: 50px; border: none; padding: 12px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
+        /* Category Buttons */
+        .cat-btn {
+            border: 1px solid #e0e0e0; background: white; color: #666;
+            border-radius: 50px; padding: 6px 16px; font-size: 0.9rem;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .cat-btn:hover { background: #f1f3f5; transform: translateY(-2px); }
+        .cat-btn.active {
+            background: var(--primary-gradient); color: white; border-color: transparent;
+            box-shadow: 0 4px 10px rgba(118, 75, 162, 0.3);
+        }
+        /* Scrollbar ซ่อนไว้แต่เลื่อนได้ */
+        .category-scroll {
+            overflow-x: auto; -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+        }
+        .category-scroll::-webkit-scrollbar { display: none; /* Chrome */ }
+
+        /* Item Card */
+        .item-card {
+            border: none; border-radius: 16px; background: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden; height: 100%;
+        }
+        .item-card:hover { transform: translateY(-5px); box-shadow: var(--card-hover-shadow); }
+        
+        .card-img-wrapper {
+            position: relative; width: 100%; padding-top: 65%;
+            background-color: #f1f3f5; overflow: hidden;
+        }
+        .card-img-wrapper img {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; transition: transform 0.5s ease;
+        }
+        .item-card:hover .card-img-wrapper img { transform: scale(1.08); }
+
+        .status-badge {
+            position: absolute; top: 12px; right: 12px;
+            padding: 6px 14px; border-radius: 30px;
+            font-size: 0.75rem; font-weight: 600;
+            backdrop-filter: blur(8px); box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 2;
+        }
+        .badge-available { background-color: rgba(255, 255, 255, 0.95); color: #198754; }
+        .badge-out { background-color: rgba(255, 255, 255, 0.95); color: #dc3545; }
+
+        /* Skeleton */
+        .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .sk-img { width: 100%; padding-top: 65%; border-radius: 16px 16px 0 0; }
+        .sk-title { height: 24px; width: 70%; margin: 15px; }
+        .sk-text { height: 16px; width: 40%; margin: 0 15px 15px 15px; }
+        .sk-btn { height: 40px; margin: 0 15px 15px 15px; border-radius: 50px; }
+
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark navbar-custom sticky-top">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a class="navbar-brand d-flex align-items-center fw-bold" href="#">
+            <i class="bi bi-robot me-2 fs-4"></i> Smart Inventory
+        </a>
+        <a href="admin.html" class="btn btn-sm btn-admin-link rounded-pill px-3 fw-bold d-flex align-items-center shadow-sm">
+            <i class="bi bi-shield-lock-fill me-1 fs-5"></i> 
+            <span class="d-none d-sm-inline small">สำหรับครู</span>
+        </a>
+    </div>
+</nav>
+
+<div class="container py-4">
+    
+    <div class="row justify-content-center mb-3">
+        <div class="col-md-8 col-lg-6">
+            <div class="position-relative">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                <input type="text" id="searchInput" class="form-control search-box ps-5" placeholder="ค้นหาชื่ออุปกรณ์..." onkeyup="filterItems()">
+            </div>
+        </div>
+    </div>
+
+    <div class="category-scroll d-flex gap-2 justify-content-start justify-content-md-center mb-4 pb-2 px-1" id="category-container">
+        </div>
+
+    <div id="skeleton-loader" class="row g-4">
+        <div class="col-12 col-md-6 col-lg-3"><div class="item-card"><div class="skeleton sk-img"></div><div class="skeleton sk-title"></div><div class="skeleton sk-text"></div><div class="skeleton sk-btn"></div></div></div>
+        <div class="col-12 col-md-6 col-lg-3"><div class="item-card"><div class="skeleton sk-img"></div><div class="skeleton sk-title"></div><div class="skeleton sk-text"></div><div class="skeleton sk-btn"></div></div></div>
+        <div class="col-12 col-md-6 col-lg-3"><div class="item-card"><div class="skeleton sk-img"></div><div class="skeleton sk-title"></div><div class="skeleton sk-text"></div><div class="skeleton sk-btn"></div></div></div>
+        <div class="col-12 col-md-6 col-lg-3"><div class="item-card"><div class="skeleton sk-img"></div><div class="skeleton sk-title"></div><div class="skeleton sk-text"></div><div class="skeleton sk-btn"></div></div></div>
+    </div>
+
+    <div id="items-container" class="row g-4" style="display: none;"></div>
+
+    <div id="no-results" class="text-center py-5" style="display: none;">
+        <i class="bi bi-search display-1 text-muted opacity-25"></i>
+        <p class="text-muted mt-3">ไม่พบอุปกรณ์ที่ค้นหา</p>
+    </div>
+</div>
+
+<div class="modal fade" id="borrowModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-light border-0">
+                <h5 class="modal-title fw-bold text-primary"><i class="bi bi-clipboard-check me-2"></i>ขอยืมอุปกรณ์</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="borrowForm">
+                    <input type="hidden" id="itemId">
+                    <input type="hidden" id="itemName">
+                    
+                    <div class="text-center mb-4">
+                        <h4 class="fw-bold text-dark" id="itemNameDisplay">...</h4>
+                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill mt-2">พร้อมให้ยืม</span>
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control rounded-3" id="studentName" placeholder="ชื่อ" required>
+                        <label>ชื่อ-นามสกุล (เช่น ด.ช.รักเรียน)</label>
+                    </div>
+
+                    <div class="row g-2 mb-4">
+                        <div class="col-6">
+                            <div class="form-floating">
+                                <select class="form-select rounded-3" id="studentClass" required>
+                                    <option value="" selected disabled>เลือกระดับชั้น</option>
+                                    <option value="ม.1">ม.1</option>
+                                    <option value="ม.2">ม.2</option>
+                                    <option value="ม.3">ม.3</option>
+                                    <option value="ม.4">ม.4</option>
+                                    <option value="ม.5">ม.5</option>
+                                    <option value="ม.6">ม.6</option>
+                                </select>
+                                <label>ระดับชั้น</label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control rounded-3" id="studentRoom" placeholder="ห้อง/เลขที่" required>
+                                <label>ห้อง / เลขที่</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="btn btn-primary w-100 btn-lg rounded-pill fw-bold py-3" style="background: var(--primary-gradient); border:none;">
+                        ยืนยันการยืม
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // ==========================================
+    // 🔴 อย่าลืมใส่ URL ครูตรงนี้นะครับ
+    // ==========================================
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzOPO59eCzyeFvdqZXOCbs5eaVBUYpsHOY37guKTeUAhFPUFXq-dy_UlF_oQKOs2Jbk/exec"; 
+    // ==========================================
+
+    let allItems = [];
+    let currentCategory = 'all'; // หมวดหมู่ที่เลือกปัจจุบัน
+
+    document.addEventListener('DOMContentLoaded', loadItems);
+
+    function loadItems() {
+        fetch(WEB_APP_URL)
+            .then(response => response.json())
+            .then(data => {
+                allItems = data;
+                renderCategories(data); // สร้างปุ่มหมวดหมู่
+                renderItems(data);
+                
+                document.getElementById('skeleton-loader').style.display = 'none';
+                document.getElementById('items-container').style.display = 'flex';
+                
+                checkDeepLink(data);
+            })
+            .catch(err => console.error(err));
+    }
+
+    // ฟังก์ชันสร้างปุ่มหมวดหมู่อัตโนมัติ
+    function renderCategories(items) {
+        const catContainer = document.getElementById('category-container');
+        
+        // ดึงรายชื่อหมวดหมู่ทั้งหมดออกมา แล้วตัดตัวซ้ำออก (Set)
+        const categories = ['all', ...new Set(items.map(item => item.category || 'อื่นๆ'))];
+        
+        catContainer.innerHTML = ''; // ล้างเก่า
+
+        categories.forEach(cat => {
+            // ถ้าชื่อหมวดเป็น all ให้แสดงคำว่า "ทั้งหมด"
+            const label = cat === 'all' ? 'ทั้งหมด' : cat;
+            
+            const btn = document.createElement('button');
+            btn.className = `cat-btn ${cat === 'all' ? 'active' : ''}`;
+            btn.innerText = label;
+            btn.onclick = () => selectCategory(cat, btn);
+            catContainer.appendChild(btn);
+        });
+    }
+
+    // เมื่อกดเลือกหมวดหมู่
+    function selectCategory(cat, btnElement) {
+        currentCategory = cat;
+        
+        // เปลี่ยนสีปุ่ม
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        btnElement.classList.add('active');
+
+        filterItems(); // เรียกฟังก์ชันกรอง
+    }
+
+    // ฟังก์ชันกรอง (ค้นหา + หมวดหมู่)
+    function filterItems() {
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+        
+        const filtered = allItems.filter(item => {
+            const matchName = item.name.toLowerCase().includes(searchText);
+            const matchCat = currentCategory === 'all' || (item.category || 'อื่นๆ') === currentCategory;
+            return matchName && matchCat;
+        });
+        
+        renderItems(filtered);
+        document.getElementById('no-results').style.display = (filtered.length === 0) ? 'block' : 'none';
+    }
+
+    function renderItems(items) {
+        const container = document.getElementById('items-container');
+        container.innerHTML = '';
+
+        items.forEach(item => {
+            const isAvailable = item.available > 0;
+            let imgSrc = item.image;
+            if (!imgSrc || !imgSrc.startsWith('http')) {
+                imgSrc = `https://placehold.co/600x400/eeeeee/764ba2?text=${item.name}`; 
+            }
+
+            const html = `
+                <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                    <div class="item-card shadow-sm position-relative h-100">
+                        <div class="status-badge ${isAvailable ? 'badge-available' : 'badge-out'}">
+                            ${isAvailable ? '<i class="bi bi-check-circle-fill me-1"></i>ว่าง' : '<i class="bi bi-x-circle-fill me-1"></i>หมด'}
+                        </div>
+                        <div class="card-img-wrapper">
+                            <img src="${imgSrc}" alt="${item.name}">
+                        </div>
+                        <div class="card-body p-4 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <h6 class="fw-bold text-dark mb-0">${item.name}</h6>
+                            </div>
+                            <small class="text-muted mb-3 d-block">${item.category || 'ทั่วไป'}</small>
+                            
+                            <div class="mb-3 small text-muted">
+                                คงเหลือ: <span class="fw-bold text-dark">${item.available}</span> / ${item.total}
+                            </div>
+                            <div class="mt-auto">
+                                <button class="btn w-100 rounded-pill fw-bold ${isAvailable ? 'btn-primary' : 'btn-secondary disabled'}" 
+                                        style="${isAvailable ? 'background: var(--primary-gradient); border:none;' : ''}"
+                                        onclick="openBorrowModal('${item.id}', '${item.name}')" 
+                                        ${!isAvailable ? 'disabled' : ''}>
+                                    ${isAvailable ? 'ยืมอุปกรณ์' : 'ของหมด'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += html;
+        });
+    }
+
+    const borrowModal = new bootstrap.Modal(document.getElementById('borrowModal'));
+    
+    function openBorrowModal(id, name) {
+        document.getElementById('itemId').value = id;
+        document.getElementById('itemName').value = name;
+        document.getElementById('itemNameDisplay').innerText = name;
+        borrowModal.show();
+    }
+
+    function checkDeepLink(items) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('id');
+        if (targetId) {
+            const item = items.find(i => i.id == targetId);
+            if (item && item.available > 0) openBorrowModal(item.id, item.name);
+        }
+    }
+
+    document.getElementById('borrowForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังส่งข้อมูล...';
+
+        const sClass = document.getElementById('studentClass').value;
+        const sRoom = document.getElementById('studentRoom').value;
+        const fullDetails = `${sClass} ห้อง ${sRoom}`;
+
+        const data = {
+            action: 'borrow_request',
+            item_id: document.getElementById('itemId').value,
+            item_name: document.getElementById('itemName').value,
+            student_name: document.getElementById('studentName').value,
+            student_details: fullDetails
+        };
+
+        fetch(WEB_APP_URL, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if(result.result === 'success') {
+                Swal.fire({
+                    title: 'ส่งคำขอสำเร็จ!',
+                    text: 'กรุณารอคุณครูอนุมัติผ่านระบบ',
+                    icon: 'success',
+                    confirmButtonColor: '#764ba2'
+                }).then(() => {
+                    window.location.href = window.location.pathname;
+                });
+                borrowModal.hide();
+            } else {
+                throw new Error(result.message);
+            }
+        })
+        .catch(error => {
+            Swal.fire('ผิดพลาด', 'เชื่อมต่อไม่ได้: ' + error, 'error');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    });
+</script>
+
+</body>
+</html>
